@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Poep Avontuur XL - HD Mario World</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik+Bubbles&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Press Start 2P', cursive;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px;
+      color: #fff;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    #marioWorldCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: -1;
+    }
+
+    .shake { animation: shakeAnim 0.3s ease-in-out; }
+    @keyframes shakeAnim {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
+    .app-container {
+      width: 100%; max-width: 950px;
+      display: flex; flex-direction: column; gap: 20px; z-index: 1;
+    }
+
+    .banner {
+      background: linear-gradient(180deg, #b85b14 0%, #7a3805 100%);
+      border: 6px solid #2d1301; border-radius: 20px;
+      padding: 18px; text-align: center;
+      box-shadow: 0 8px 0 #000, inset 0 4px 0 #d97828;
+    }
+    .banner h1 {
+      font-family: 'Rubik Bubbles', cursive; 
+      font-size: 42px;
+      color: #ffcc00; text-shadow: 4px 4px 0 #e52521, -2px -2px 0 #000, 5px 5px 0 #000;
+      letter-spacing: 2px;
+    }
+
+    .grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 20px; }
+    @media (max-width: 800px) { 
+      .grid { grid-template-columns: 1fr; } 
+      .banner h1 { font-size: 30px; }
+    }
+
+    .card-panel {
+      background: rgba(0, 0, 0, 0.78); border: 5px solid #000;
+      border-radius: 20px; padding: 22px;
+      backdrop-filter: blur(4px); display: flex;
+      flex-direction: column; align-items: center; box-shadow: 0 8px 0 rgba(0,0,0,0.5);
+    }
+
+    .panel-title {
+      font-size: 14px;
+      color: #f8d800; text-shadow: 2px 2px 0 #000;
+      margin-bottom: 8px; text-align: center;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+
+    .title-emoji { font-size: 26px; line-height: 1; }
+    .btn-emoji { font-size: 28px; vertical-align: middle; }
+    .badge-emoji { font-size: 28px; vertical-align: middle; }
+
+    /* RONDE MARIO MUNT */
+    .coin-display-wrapper { position: relative; margin: 10px 0; text-align: center; width: 100%; }
+    
+    .sunburst {
+      position: absolute; top: 40%; left: 50%;
+      width: 220px; height: 220px; margin-top: -110px; margin-left: -110px;
+      background: radial-gradient(circle, rgba(255,230,0,0.8) 0%, rgba(255,215,0,0) 70%);
+      border-radius: 50%; animation: pulseGlow 2s infinite alternate; z-index: -1;
+    }
+    @keyframes pulseGlow { from { transform: scale(0.8); opacity: 0.6; } to { transform: scale(1.2); opacity: 1; } }
+
+    .mario-coin {
+      width: 100px; height: 100px;
+      background: linear-gradient(135deg, #fff77d 0%, #ffd700 35%, #f8a100 70%, #b86b00 100%);
+      border-radius: 50%; border: 6px solid #000;
+      box-shadow: 
+        inset -6px -6px 0px rgba(0,0,0,0.25),
+        inset 6px 6px 0px rgba(255,255,255,0.8),
+        0 8px 0 rgba(0,0,0,0.4);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto;
+      animation: coinSpin 5s infinite linear;
+    }
+
+    .mario-coin-inner {
+      width: 24px; height: 50px;
+      background: linear-gradient(135deg, #d88000 0%, #f8a100 100%);
+      border: 4px solid #000; border-radius: 6px;
+      box-shadow: inset 2px 2px 0px rgba(0,0,0,0.3);
+    }
+
+    @keyframes coinSpin {
+      0% { transform: rotateY(0deg); }
+      100% { transform: rotateY(360deg); }
+    }
+
+    .coin-count-badge {
+      background: #f8d800; color: #000; border: 4px solid #000; border-radius: 14px;
+      padding: 10px 20px; font-size: 20px;
+      margin-top: 15px; box-shadow: 0 5px 0 #9e8900;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+
+    /* VISUELE MUNTEN VOORRAAD CONTAINER */
+    .visual-coins-grid {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+      margin-top: 12px; max-height: 100px; overflow-y: auto; padding: 8px;
+      background: rgba(0,0,0,0.5); border-radius: 12px; border: 3px inset #000; width: 100%;
+    }
+    .mini-coin {
+      width: 22px; height: 22px;
+      background: linear-gradient(135deg, #fff77d, #ffd700, #b86b00);
+      border-radius: 50%; border: 2px solid #000;
+      animation: miniBounce 1.5s infinite ease-in-out alternate;
+    }
+    @keyframes miniBounce { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+
+    /* KNOPPEN */
+    .q-block-btn {
+      width: 100%; padding: 18px; border-radius: 14px; border: 5px solid #000;
+      font-family: 'Press Start 2P', cursive; 
+      font-size: 11px; color: white; cursor: pointer; margin-top: 12px; text-shadow: 2px 2px 0 #000;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      box-shadow: 0 6px 0 #000; transition: transform 0.1s;
+    }
+    .q-block-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #000; }
+    .btn-green { background: linear-gradient(180deg, #61d866 0%, #43b047 100%); }
+    .btn-red { background: linear-gradient(180deg, #ff5c5c 0%, #e52521 100%); }
+
+    .block-bounce { animation: blockBounce 0.3s ease; }
+    @keyframes blockBounce { 0% { transform: translateY(0); } 50% { transform: translateY(-14px); } 100% { transform: translateY(0); } }
+
+    /* WARP PIPE VOORTGANG */
+    .pipe-frame {
+      width: 100%; background: #1a1a1a; border: 4px solid #000; border-radius: 16px;
+      padding: 6px; margin: 12px 0; box-shadow: inset 0 0 10px #000;
+    }
+    .pipe-inner { height: 36px; background: #333; border-radius: 10px; overflow: hidden; position: relative; }
+    .pipe-fill {
+      height: 100%; background: linear-gradient(180deg, #b5ff6d 0%, #43b047 40%, #1b5e20 100%);
+      width: 0%; transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-right: 4px solid #fff; box-shadow: 0 0 12px #7cfc00;
+    }
+
+    /* SPAARDOELEN LIJST */
+    .goals-wrapper { width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+    
+    .goal-item {
+      background: #fff; color: #000; border: 4px solid #000; border-radius: 12px;
+      padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; box-shadow: 0 5px 0 #888; position: relative; gap: 8px;
+    }
+    .goal-item.active { background: #fff6a3; border-color: #e52521; box-shadow: 0 5px 0 #e52521; }
+    .goal-item.affordable { border-color: #43b047; background: #e8fbe8; }
+
+    .goal-title-container { display: flex; align-items: center; gap: 12px; }
+    .big-emoji { font-size: 36px; line-height: 1; }
+
+    .btn-buy {
+      background: #43b047; color: white; border: 3px solid #000; border-radius: 8px;
+      padding: 8px 10px; font-family: 'Press Start 2P'; font-size: 10px;
+      cursor: pointer; animation: pulseBuy 1s infinite alternate; text-shadow: 1px 1px 0 #000;
+      display: flex; align-items: center; gap: 6px;
+    }
+    @keyframes pulseBuy { from { transform: scale(0.95); } to { transform: scale(1.05); } }
+
+    .btn-delete {
+      background: #ff5c5c; color: white; border: 2px solid #000; border-radius: 6px;
+      padding: 6px 8px; font-size: 16px; cursor: pointer; margin-left: 6px; display: flex; align-items: center;
+    }
+
+    /* OVERWINNING OVERLAY MEER ENERGIE & GROTE EMOJIS */
+    .victory-screen {
+      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.94); z-index: 9999;
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 20px;
+    }
+    .victory-title { font-family: 'Rubik Bubbles', cursive; font-size: 48px; color: #f8d800; text-shadow: 4px 4px 0 #e52521; margin-top: 15px; }
+    
+    .victory-emojis { 
+      font-size: 120px; 
+      line-height: 1;
+      display: flex; gap: 15px; justify-content: center;
+      animation: emojiPop 0.8s infinite alternate ease-in-out;
+      text-shadow: 0 10px 20px rgba(0,0,0,0.8);
+    }
+    @keyframes emojiPop {
+      0% { transform: scale(1) translateY(0); }
+      100% { transform: scale(1.15) translateY(-15px); }
+    }
+
+    @media (max-width: 600px) {
+      .victory-emojis { font-size: 80px; }
+      .victory-title { font-size: 34px; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="marioWorldCanvas"></canvas>
+
+  <div class="app-container" id="appContainer">
+    
+    <div class="banner">
+      <h1>SUPER POEP AVONTUUR</h1>
+    </div>
+
+    <div class="grid">
+      <!-- Linker Paneel -->
+      <div class="card-panel">
+        <div class="panel-title"><span class="title-emoji">⭐</span> SPAARPOT <span class="title-emoji">⭐</span></div>
+        
+        <div class="coin-display-wrapper">
+          <div class="sunburst"></div>
+          <div class="mario-coin" id="coinButton" onclick="addCoin()">
+            <div class="mario-coin-inner"></div>
+          </div>
+          <div class="coin-count-badge">
+            <span class="badge-emoji">🪙</span> 
+            <span><span id="coinText">0</span> MUNTEN</span>
+          </div>
+        </div>
+
+        <div style="font-size: 10px; color: #ffcc00; margin-top: 8px;">JOUW MUNTJES:</div>
+        <div class="visual-coins-grid" id="visualCoinsGrid"></div>
+
+        <button class="q-block-btn btn-green" id="btnAdd" onclick="addCoin()">
+          <span class="btn-emoji">💩</span> +1 OP TIJD POEPEN!
+        </button>
+        
+        <button class="q-block-btn btn-red" onclick="removeCoin()">
+          <span class="btn-emoji">😢</span> -1 TE LAAT / ONGELUKJE
+        </button>
+      </div>
+
+      <!-- Rechter Paneel -->
+      <div class="card-panel">
+        <div class="panel-title"><span class="title-emoji">🎯</span> GESELECTEERD DOEL</div>
+        <div style="font-size: 13px; color: #fff; margin-bottom: 5px; text-align: center;" id="activeGoalName">-</div>
+
+        <div class="pipe-frame">
+          <div class="pipe-inner">
+            <div class="pipe-fill" id="pipeFill"></div>
+          </div>
+        </div>
+        <div style="font-size: 10px; color: #aaa; margin-bottom: 15px;" id="pipeProgressText">0 / 0 MUNTEN</div>
+
+        <div class="panel-title" style="text-align: left; width: 100%;">ALLE SPAARDOELEN:</div>
+        <div class="goals-wrapper" id="goalsList"></div>
+
+        <button onclick="addNewGoal()" style="margin-top: 15px; padding: 12px; font-family:'Press Start 2P'; font-size:9px; background:#f8d800; border:3px solid #000; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">➕</span> NIEUW DOEL TOEVOEGEN
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="victory-screen" id="victoryScreen">
+    <div class="victory-emojis" id="victoryEmojis">🎆 🍄 🎁</div>
+    <div class="victory-title">GEFELICITEERD!</div>
+    <p id="victoryDetail" style="font-size: 13px; line-height: 1.8; margin: 25px 0; color: #fff; max-width: 600px;"></p>
+    <button class="q-block-btn btn-green" style="width: 260px;" onclick="closeVictory()">
+      <span class="btn-emoji">⭐</span> SUPER TOF!
+    </button>
+  </div>
+
+  <script>
+    /* --- ACHTERGROND & MARIO FIGUREN --- */
+    const canvas = document.getElementById('marioWorldCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const groundHeight = 90;
+    
+    let clouds = [
+      { x: 30, y: 70, speed: 0.4 },
+      { x: 350, y: 110, speed: 0.25 },
+      { x: 750, y: 50, speed: 0.35 }
+    ];
+
+    // Personages instellingen
+    let mario = { x: 80, speed: 2.0, isJumping: false, vy: 0, y: 0 };
+    let yoshi = { x: 260, speed: 1.6, tongueOut: false, timer: 0 };
+    let toad = { x: 420, bounce: 0 };
+    let goomba = { x: 620, speed: -0.9 };
+    let bowser = { x: 750, speed: -0.5, fireTimer: 0, isBreathingFire: false };
+    let fireballs = [];
+    let starman = { x: -100, speed: 2.8, animTime: 0 };
+
+    let piranhaY = 0;
+    let piranhaDir = 1;
+    let floatingCoinAnim = 0;
+
+    let astro = { x: -150, y: 100, speed: 3.2, angle: 0, active: true, cooldown: 0 };
+
+    function drawBackgroundLevel() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Lucht
+      let skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      skyGradient.addColorStop(0, '#5c94fc');
+      skyGradient.addColorStop(0.8, '#8ab4ff');
+      ctx.fillStyle = skyGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Wolken
+      ctx.fillStyle = '#ffffff';
+      clouds.forEach(c => {
+        c.x += c.speed;
+        if (c.x > canvas.width + 100) c.x = -100;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 25, 0, Math.PI * 2);
+        ctx.arc(c.x + 20, c.y - 10, 20, 0, Math.PI * 2);
+        ctx.arc(c.x + 40, c.y, 25, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Astro Bot
+      if (astro.active) {
+        astro.x += astro.speed;
+        astro.angle += 0.05;
+        let flyY = astro.y + Math.sin(astro.angle) * 30;
+        drawDetailedAstroBot(astro.x, flyY);
+
+        if (astro.x > canvas.width + 150) {
+          astro.active = false;
+          astro.cooldown = 400;
+        }
+      } else {
+        astro.cooldown--;
+        if (astro.cooldown <= 0) {
+          astro.x = -100;
+          astro.y = 80 + Math.random() * 100;
+          astro.active = true;
+        }
+      }
+
+      const floorY = canvas.height - groundHeight;
+
+      // Kasteel & Decoratie
+      drawCastle(canvas.width - 220, floorY);
+
+      drawQuestionBlock(150, floorY - 140);
+      drawBrickBlock(182, floorY - 140);
+      drawQuestionBlock(214, floorY - 140);
+
+      floatingCoinAnim += 0.08;
+      let coinBounceY = Math.sin(floatingCoinAnim) * 5;
+      drawMiniBackgroundCoin(158, floorY - 175 + coinBounceY);
+      drawMiniBackgroundCoin(222, floorY - 175 + coinBounceY);
+
+      drawWarpPipe(500, floorY - 80);
+      piranhaY += 0.3 * piranhaDir;
+      if (piranhaY > 25 || piranhaY < 0) piranhaDir *= -1;
+      drawPiranhaPlant(512, floorY - 80 - 30 + piranhaY);
+
+      // Grond
+      ctx.fillStyle = '#e76d14';
+      ctx.fillRect(0, floorY, canvas.width, groundHeight);
+      ctx.fillStyle = '#43b047'; ctx.fillRect(0, floorY, canvas.width, 18);
+      ctx.fillStyle = '#2e7d32'; ctx.fillRect(0, floorY + 18, canvas.width, 4);
+
+      /* --- TEKEN VERBETERDE MARIO PERSONAGES --- */
+
+      // 1. MARIO (HD)
+      mario.x += mario.speed;
+      if (mario.x > canvas.width + 60) mario.x = -60;
+      if (Math.random() < 0.005 && !mario.isJumping) { mario.isJumping = true; mario.vy = -11; }
+      if (mario.isJumping) {
+        mario.vy += 0.6; mario.y += mario.vy;
+        if (mario.y >= 0) { mario.y = 0; mario.isJumping = false; }
+      }
+      drawDetailedMario(mario.x, floorY - 55 + mario.y);
+
+      // 2. YOSHI (HD)
+      yoshi.x += yoshi.speed;
+      if (yoshi.x > canvas.width + 80) yoshi.x = -80;
+      yoshi.timer++;
+      if (yoshi.timer % 180 === 0) yoshi.tongueOut = true;
+      if (yoshi.timer % 180 === 40) yoshi.tongueOut = false;
+      drawDetailedYoshi(yoshi.x, floorY - 58, yoshi.tongueOut);
+
+      // 3. TOAD (HD)
+      toad.bounce += 0.1;
+      let toadY = floorY - 48 + Math.abs(Math.sin(toad.bounce)) * -10;
+      drawDetailedToad(toad.x, toadY);
+
+      // 4. GOOMBA (HD)
+      goomba.x += goomba.speed;
+      if (goomba.x < -40) goomba.x = canvas.width + 40;
+      drawDetailedGoomba(goomba.x, floorY - 40);
+
+      // 5. STARMAN (HD)
+      starman.x += starman.speed;
+      starman.animTime += 0.15;
+      if (starman.x > canvas.width + 50) starman.x = -100;
+      let starY = floorY - 38 - Math.abs(Math.sin(starman.animTime)) * 25;
+      drawDetailedStarman(starman.x, starY);
+
+      // 6. BOWSER (HD)
+      bowser.x += bowser.speed;
+      if (bowser.x < 350 || bowser.x > canvas.width - 250) bowser.speed *= -1;
+      
+      bowser.fireTimer++;
+      if (bowser.fireTimer % 200 === 0) {
+        bowser.isBreathingFire = true;
+        fireballs.push({ x: bowser.x - 30, y: floorY - 55, speed: -4.5 });
+      }
+      if (bowser.fireTimer % 200 === 45) bowser.isBreathingFire = false;
+
+      drawDetailedBowser(bowser.x, floorY - 85, bowser.isBreathingFire);
+
+      // Vuurballen
+      for (let i = fireballs.length - 1; i >= 0; i--) {
+        let f = fireballs[i];
+        f.x += f.speed;
+        drawFireball(f.x, f.y);
+        if (f.x < -50) fireballs.splice(i, 1);
+      }
+
+      requestAnimationFrame(drawBackgroundLevel);
+    }
+
+    /* =========================================================
+       Nieuwe, Gedetailleerde Tekenfuncties voor de Personages
+       ========================================================= */
+
+    // 1. MOOIE MARIO
+    function drawDetailedMario(x, y) {
+      ctx.save();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+
+      // Pet
+      ctx.fillStyle = '#e52521';
+      ctx.beginPath(); ctx.ellipse(x + 18, y + 10, 16, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillRect(x + 22, y + 12, 12, 4); // Klep
+
+      // 'M' Embleem
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(x + 16, y + 8, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e52521'; ctx.font = 'bold 7px sans-serif'; ctx.fillText('M', x + 13, y + 11);
+
+      // Gezicht & Oor
+      ctx.fillStyle = '#ffcc99';
+      ctx.beginPath(); ctx.arc(x + 18, y + 20, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x + 8, y + 21, 3, 0, Math.PI * 2); ctx.fill(); // Oor
+
+      // Oog & Snor
+      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x + 21, y + 18, 2, 0, Math.PI * 2); ctx.fill(); // Oog
+      ctx.fillStyle = '#4a2511'; // Snor
+      ctx.beginPath(); ctx.ellipse(x + 22, y + 23, 7, 3, 0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Tuinbroek & Shirt
+      ctx.fillStyle = '#e52521'; ctx.fillRect(x + 10, y + 28, 16, 12); // Rood shirt
+      ctx.fillStyle = '#0026ca'; ctx.fillRect(x + 10, y + 36, 16, 12); // Blauwe broek
+      ctx.fillRect(x + 12, y + 30, 4, 10); ctx.fillRect(x + 20, y + 30, 4, 10); // Bretels
+
+      // Gele Knoppen
+      ctx.fillStyle = '#ffcc00';
+      ctx.beginPath(); ctx.arc(x + 14, y + 38, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 22, y + 38, 2, 0, Math.PI * 2); ctx.fill();
+
+      // Bruine Schoenen
+      ctx.fillStyle = '#7a3805';
+      ctx.fillRect(x + 6, y + 46, 10, 8); ctx.fillRect(x + 20, y + 46, 10, 8);
+
+      ctx.restore();
+    }
+
+    // 2. MOOIE YOSHI
+    function drawDetailedYoshi(x, y, tongue) {
+      ctx.save();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+
+      // Schild op rug
+      ctx.fillStyle = '#e52521';
+      ctx.beginPath(); ctx.arc(x + 8, y + 32, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Groen Lichaam & Staart
+      ctx.fillStyle = '#43b047';
+      ctx.beginPath(); ctx.ellipse(x + 22, y + 36, 14, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + 12, y + 42); ctx.lineTo(x + 2, y + 38); ctx.lineTo(x + 14, y + 32); ctx.fill(); // Staart
+
+      // Witte Buik
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(x + 26, y + 38, 9, 12, 0.2, 0, Math.PI * 2); ctx.fill();
+
+      // Kop & Snuit
+      ctx.fillStyle = '#43b047';
+      ctx.beginPath(); ctx.arc(x + 30, y + 16, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Achterkop
+      ctx.beginPath(); ctx.ellipse(x + 38, y + 22, 14, 11, -0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // Snuit
+
+      // Grote Witte Ogen
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(x + 28, y + 10, 6, 10, 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x + 29, y + 10, 2, 0, Math.PI * 2); ctx.fill(); // Pupil
+
+      // Oranje Laarsjes
+      ctx.fillStyle = '#d88000';
+      ctx.beginPath(); ctx.ellipse(x + 18, y + 52, 8, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(x + 32, y + 52, 8, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Lange Tong
+      if (tongue) {
+        ctx.fillStyle = '#ff5c5c';
+        ctx.beginPath(); ctx.fillRect(x + 50, y + 20, 35, 5); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x + 85, y + 22, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // 3. MOOIE TOAD
+    function drawDetailedToad(x, y) {
+      ctx.save();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+
+      // Paddenstoelenhoed
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(x + 18, y + 16, 22, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Rode Stippen
+      ctx.fillStyle = '#e52521';
+      ctx.beginPath(); ctx.arc(x + 18, y + 8, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 2, y + 16, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 34, y + 16, 5, 0, Math.PI * 2); ctx.fill();
+
+      // Gezicht
+      ctx.fillStyle = '#ffcc99';
+      ctx.beginPath(); ctx.ellipse(x + 18, y + 28, 12, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Oogjes & Vrolijk Mondje
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(x + 13, y + 27, 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + 23, y + 27, 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 18, y + 32, 3, 0, Math.PI); ctx.stroke();
+
+      // Blauw Jasje met Gouden Rand
+      ctx.fillStyle = '#0026ca'; ctx.fillRect(x + 8, y + 36, 20, 10);
+      ctx.fillStyle = '#ffcc00'; ctx.fillRect(x + 8, y + 36, 3, 10); ctx.fillRect(x + 25, y + 36, 3, 10);
+
+      // Voetjes
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(x + 11, y + 47, 5, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(x + 25, y + 47, 5, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // 4. MOOIE GOOMBA
+    function drawDetailedGoomba(x, y) {
+      ctx.save();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+
+      // Bruine Kop (Paddenstoelvorm)
+      ctx.fillStyle = '#8b4513';
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y + 24);
+      ctx.quadraticCurveTo(x + 16, y - 4, x + 28, y + 24);
+      ctx.fill(); ctx.stroke();
+
+      // Gezichtje
+      ctx.fillStyle = '#ffcc99';
+      ctx.beginPath(); ctx.ellipse(x + 16, y + 26, 11, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Boze Wenkbrauwen & Ogen
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.moveTo(x + 6, y + 16); ctx.lineTo(x + 15, y + 21); ctx.lineTo(x + 8, y + 22); ctx.fill(); // L
+      ctx.beginPath(); ctx.moveTo(x + 26, y + 16); ctx.lineTo(x + 17, y + 21); ctx.lineTo(x + 24, y + 22); ctx.fill(); // R
+      
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(x + 10, y + 24, 3, 5, -0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(x + 22, y + 24, 3, 5, 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(x + 11, y + 24, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 21, y + 24, 1.5, 0, Math.PI * 2); ctx.fill();
+
+      // Vlijmscherpe Tanden
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.moveTo(x + 9, y + 32); ctx.lineTo(x + 11, y + 28); ctx.lineTo(x + 13, y + 32); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x + 19, y + 32); ctx.lineTo(x + 21, y + 28); ctx.lineTo(x + 23, y + 32); ctx.fill();
+
+      // Zwarte Voetjes
+      ctx.fillStyle = '#222';
+      ctx.beginPath(); ctx.ellipse(x + 7, y + 37, 7, 4, -0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(x + 25, y + 37, 7, 4, 0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // 5. MOOIE STARMAN
+    function drawDetailedStarman(x, y) {
+      ctx.save();
+      ctx.fillStyle = '#ffcc00';
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+
+      // Ster Tekenen
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * 16 + x, -Math.sin((18 + i * 72) * Math.PI / 180) * 16 + y);
+        ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * 7 + x, -Math.sin((54 + i * 72) * Math.PI / 180) * 7 + y);
+      }
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      // Karakteristieke Lange Oogjes
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(x - 4, y - 2, 1.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + 4, y - 2, 1.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.restore();
+    }
+
+    // 6. MOOIE ASTRO BOT
+    function drawDetailedAstroBot(x, y) {
+      ctx.save();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+
+      // Zwevende Jetpack Vlammen
+      ctx.fillStyle = '#00d2ff';
+      ctx.beginPath(); ctx.arc(x - 12, y + 22, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 12, y + 22, 5, 0, Math.PI * 2); ctx.fill();
+
+      // Robot Lichaam & Armpjes
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(x, y + 10, 18, 14, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Glanzende Blauwe Heup/Details
+      ctx.fillStyle = '#0072ff'; ctx.fillRect(x - 10, y + 14, 20, 5);
+
+      // Bot Kop
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(x, y - 6, 16, 13, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Zwart Vizier met Lichtgevende Blauwe Oogjes
+      ctx.fillStyle = '#0a0a1a';
+      ctx.beginPath(); ctx.ellipse(x, y - 5, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#00d2ff';
+      ctx.beginPath(); ctx.arc(x - 5, y - 5, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 5, y - 5, 3, 0, Math.PI * 2); ctx.fill();
+
+      // Antenne met Blauw Lampje
+      ctx.fillStyle = '#888'; ctx.fillRect(x - 1, y - 23, 2, 6);
+      ctx.fillStyle = '#00d2ff'; ctx.beginPath(); ctx.arc(x, y - 24, 3, 0, Math.PI * 2); ctx.fill();
+
+      ctx.restore();
+    }
+
+    // 7. MOOIE BOWSER
+    function drawDetailedBowser(x, y, isBreathingFire) {
+      ctx.save();
+      
+      // GROENE SCHILD
+      ctx.fillStyle = '#0f7d1a';
+      ctx.beginPath();
+      ctx.ellipse(x + 50, y + 45, 30, 36, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.stroke();
+
+      // WITTE SCHILD RAND
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 5;
+      ctx.stroke();
+
+      // STEKELS OP SCHILD
+      ctx.fillStyle = '#fff7d0';
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+      [ {sx: x + 35, sy: y + 20}, {sx: x + 58, sy: y + 25}, {sx: x + 40, sy: y + 48}, {sx: x + 62, sy: y + 52} ].forEach(sp => {
+        ctx.beginPath();
+        ctx.arc(sp.sx, sp.sy, 7, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      });
+
+      // GELE BUIK / LICHAAM
+      ctx.fillStyle = '#f8d800';
+      ctx.beginPath(); ctx.ellipse(x + 25, y + 55, 22, 28, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.stroke();
+
+      // BUIK STREEPJES
+      ctx.strokeStyle = '#d88000'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x + 10, y + 48); ctx.lineTo(x + 35, y + 48); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + 8, y + 58); ctx.lineTo(x + 32, y + 58); ctx.stroke();
+
+      // KOP & SNUIT
+      ctx.fillStyle = '#0f7d1a';
+      ctx.beginPath(); ctx.ellipse(x + 12, y + 22, 18, 16, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.stroke();
+
+      ctx.fillStyle = '#f8d800';
+      ctx.beginPath(); ctx.ellipse(x + 2, y + 32, 16, 12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.stroke();
+
+      // RODE HANENKAM
+      ctx.fillStyle = '#e52521';
+      ctx.beginPath();
+      ctx.moveTo(x + 12, y + 8); ctx.lineTo(x + 30, y - 8); ctx.lineTo(x + 28, y + 15);
+      ctx.fill(); ctx.stroke();
+
+      // WITTE HOORNS
+      ctx.fillStyle = '#fff7d0';
+      ctx.beginPath();
+      ctx.moveTo(x + 22, y + 12); ctx.quadraticCurveTo(x + 40, y + 2, x + 38, y + 22);
+      ctx.fill(); ctx.stroke();
+
+      // BOOS ROOD OOG
+      ctx.fillStyle = '#e52521'; ctx.beginPath(); ctx.arc(x + 8, y + 18, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x + 7, y + 18, 2, 0, Math.PI * 2); ctx.fill();
+
+      // TANDEN
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.moveTo(x - 8, y + 32); ctx.lineTo(x - 4, y + 38); ctx.lineTo(x, y + 32); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x + 2, y + 32); ctx.lineTo(x + 6, y + 38); ctx.lineTo(x + 10, y + 32); ctx.fill();
+
+      // POTEN EN KLAUWEN
+      ctx.fillStyle = '#f8d800';
+      ctx.fillRect(x + 2, y + 72, 20, 14);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x - 2, y + 80, 5, 6); ctx.fillRect(x + 5, y + 80, 5, 6); ctx.fillRect(x + 12, y + 80, 5, 6);
+
+      // ARM EN BAND MET STEKELS
+      ctx.fillStyle = '#f8d800';
+      ctx.beginPath(); ctx.arc(x + 5, y + 48, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#000'; ctx.fillRect(x - 2, y + 44, 14, 6);
+      ctx.fillStyle = '#fff'; ctx.fillRect(x, y + 42, 3, 3); ctx.fillRect(x + 6, y + 42, 3, 3);
+
+      // VURIGE ADEM
+      if (isBreathingFire) {
+        ctx.fillStyle = '#ff5c5c';
+        ctx.beginPath(); ctx.arc(x - 25, y + 32, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath(); ctx.arc(x - 20, y + 32, 10, 0, Math.PI * 2); ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function drawFireball(x, y) {
+      ctx.fillStyle = '#e52521'; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function drawWarpPipe(x, y) {
+      ctx.fillStyle = '#00a800'; ctx.fillRect(x, y, 48, 80); ctx.fillRect(x - 4, y, 56, 20);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(x - 4, y, 56, 20); ctx.strokeRect(x, y + 20, 48, 60);
+    }
+
+    function drawPiranhaPlant(x, y) {
+      ctx.fillStyle = '#e52521'; ctx.beginPath(); ctx.arc(x + 12, y + 12, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillRect(x + 4, y + 8, 4, 4); ctx.fillRect(x + 16, y + 14, 4, 4);
+    }
+
+    function drawCastle(x, y) {
+      ctx.fillStyle = '#b85b14'; ctx.fillRect(x, y - 100, 120, 100);
+      ctx.fillStyle = '#000'; ctx.fillRect(x + 45, y - 50, 30, 50);
+      ctx.fillStyle = '#000'; ctx.fillRect(x + 60, y - 140, 4, 40);
+      ctx.fillStyle = '#e52521'; ctx.beginPath(); ctx.moveTo(x + 64, y - 140); ctx.lineTo(x + 90, y - 130); ctx.lineTo(x + 64, y - 120); ctx.fill();
+    }
+
+    function drawQuestionBlock(x, y) {
+      ctx.fillStyle = '#f8a100'; ctx.fillRect(x, y, 32, 32);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(x, y, 32, 32);
+      ctx.fillStyle = '#fff'; ctx.font = '12px "Press Start 2P"'; ctx.fillText('?', x + 10, y + 22);
+    }
+
+    function drawBrickBlock(x, y) {
+      ctx.fillStyle = '#b85b14'; ctx.fillRect(x, y, 32, 32);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(x, y, 32, 32);
+    }
+
+    function drawMiniBackgroundCoin(x, y) {
+      ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+    }
+
+    drawBackgroundLevel();
+
+    /* --- LOGICA SPAARSYSSTEEM --- */
+    let coins = parseInt(localStorage.getItem('mario_coins_v12')) || 0;
+    let activeGoalId = parseInt(localStorage.getItem('mario_goal_id_v12')) || 1;
+    
+    let goals = JSON.parse(localStorage.getItem('mario_goals_v12')) || [
+      { id: 1, icon: "🧱", name: "LEGO SET", target: 20 },
+      { id: 2, icon: "🍦", name: "IJSJE ETEN", target: 10 },
+      { id: 3, icon: "🥞", name: "PANNENKOEKEN", target: 15 }
+    ];
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playAudioNote(freq, duration, type='sine', delay=0) {
+      setTimeout(() => {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+          osc.stop(audioCtx.currentTime + duration);
+        } catch(e) {}
+      }, delay);
+    }
+
+    function playCoinSound() {
+      playAudioNote(987.77, 0.08, 'sine', 0);
+      playAudioNote(1318.51, 0.35, 'sine', 80);
+    }
+
+    function playFanfareSound() {
+      const notes = [
+        {f: 261, d: 0.1, t: 0}, {f: 329, d: 0.1, t: 100},
+        {f: 392, d: 0.1, t: 200}, {f: 523, d: 0.15, t: 300},
+        {f: 659, d: 0.15, t: 420}, {f: 783, d: 0.5, t: 540}
+      ];
+      notes.forEach(n => playAudioNote(n.f, n.d, 'square', n.t));
+    }
+
+    function updateUI() {
+      document.getElementById('coinText').innerText = coins;
+      localStorage.setItem('mario_coins_v12', coins);
+      localStorage.setItem('mario_goals_v12', JSON.stringify(goals));
+      localStorage.setItem('mario_goal_id_v12', activeGoalId);
+
+      const visualGrid = document.getElementById('visualCoinsGrid');
+      visualGrid.innerHTML = '';
+      for (let i = 0; i < coins; i++) {
+        const miniCoin = document.createElement('div');
+        miniCoin.className = 'mini-coin';
+        visualGrid.appendChild(miniCoin);
+      }
+
+      const currentGoal = goals.find(g => g.id === activeGoalId) || goals[0];
+      if (currentGoal) {
+        document.getElementById('activeGoalName').innerHTML = `<span style="font-size:24px; vertical-align:middle;">${currentGoal.icon || '🎯'}</span> ${currentGoal.name}`;
+        let percentage = Math.min((coins / currentGoal.target) * 100, 100);
+        document.getElementById('pipeFill').style.width = percentage + '%';
+        document.getElementById('pipeProgressText').innerText = `${coins} / ${currentGoal.target} MUNTEN`;
+      }
+
+      const list = document.getElementById('goalsList');
+      list.innerHTML = '';
+      
+      goals.forEach(goal => {
+        const canAfford = coins >= goal.target;
+        const item = document.createElement('div');
+        item.className = `goal-item ${goal.id === activeGoalId ? 'active' : ''} ${canAfford ? 'affordable' : ''}`;
+
+        let buyButtonHtml = '';
+        if (canAfford) {
+          buyButtonHtml = `<button class="btn-buy" onclick="buyGoal(event, ${goal.id})"><span style="font-size:18px;">🎁</span> KOPEN!</button>`;
+        }
+
+        item.onclick = (e) => {
+          if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('btn-buy')) {
+            activeGoalId = goal.id;
+            updateUI();
+          }
+        };
+
+        item.innerHTML = `
+          <div class="goal-title-container">
+            <span class="big-emoji">${goal.icon || '🎁'}</span>
+            <div>
+              <b>${goal.name}</b><br>
+              <span style="color: #555; font-size: 10px; display:inline-flex; align-items:center; gap:3px;">
+                ${goal.target} <span style="font-size:14px;">🪙</span>
+              </span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center;">
+            ${buyButtonHtml}
+            <button class="btn-delete" onclick="deleteGoal(event, ${goal.id})">🗑️</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function addCoin() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      coins++;
+      playCoinSound();
+
+      const btn = document.getElementById('btnAdd');
+      btn.classList.add('block-bounce');
+      setTimeout(() => btn.classList.remove('block-bounce'), 300);
+
+      const hitGoal = goals.find(g => g.target === coins);
+      if (hitGoal) {
+        setTimeout(() => triggerVictory(hitGoal, false), 300);
+      }
+
+      updateUI();
+    }
+
+    function removeCoin() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (coins > 0) {
+        coins--;
+        playAudioNote(180, 0.25, 'sawtooth');
+        
+        const container = document.getElementById('appContainer');
+        container.classList.add('shake');
+        setTimeout(() => container.classList.remove('shake'), 300);
+
+        updateUI();
+      }
+    }
+
+    function buyGoal(event, goalId) {
+      event.stopPropagation();
+      const goal = goals.find(g => g.id === goalId);
+      if (goal && coins >= goal.target) {
+        coins -= goal.target;
+        triggerVictory(goal, true);
+        updateUI();
+      }
+    }
+
+    function deleteGoal(event, goalId) {
+      event.stopPropagation();
+      if (confirm("Wil je dit spaardoel verwijderen?")) {
+        goals = goals.filter(g => g.id !== goalId);
+        if (activeGoalId === goalId && goals.length > 0) {
+          activeGoalId = goals[0].id;
+        }
+        updateUI();
+      }
+    }
+
+    function addNewGoal() {
+      const emoji = prompt("Kies een grote emoticon/emoji voor het doel (bijv 🚲, 🧸, 🎮, 🍕):", "🎁") || "🎁";
+      const name = prompt("Naam van het nieuwe spaardoel:");
+      if (!name) return;
+      const target = parseInt(prompt("Hoeveel munten kost dit doel?", "10"));
+      if (isNaN(target) || target <= 0) return;
+
+      const newGoal = { id: Date.now(), icon: emoji, name: name.toUpperCase(), target: target };
+      goals.push(newGoal);
+      activeGoalId = newGoal.id;
+      updateUI();
+    }
+
+    function triggerVictory(goal, wasPurchased) {
+      playFanfareSound();
+      
+      const icon = goal.icon || '🎁';
+      document.getElementById('victoryEmojis').innerHTML = `🎆 ${icon} 🎆`;
+
+      const text = wasPurchased 
+        ? `JE HEBT DE MUNTEN INGELEVERD EN VRIJGESPEELD:\n\n"${goal.name}"!`
+        : `JE HEBT GENOEG MUNTEN VOOR:\n\n"${goal.name}"!\n\nKlik op 'KOPEN' om hem in te lossen!`;
+      
+      document.getElementById('victoryDetail').innerText = text;
+      document.getElementById('victoryScreen').style.display = 'flex';
+    }
+
+    function closeVictory() {
+      document.getElementById('victoryScreen').style.display = 'none';
+    }
+
+    updateUI();
+  </script>
+</body>
+</html>
